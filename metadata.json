@@ -1,0 +1,6 @@
+{
+  "name": "QuantAgent Framework",
+  "description": "LLM-Powered Multi-Agent Quant Research & Trading Framework Dashboard",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

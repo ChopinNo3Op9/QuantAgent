@@ -6,14 +6,6 @@ QuantAgent is a powerful, LLM-powered multi-agent framework designed for sophist
 
 In traditional finance, trade ideas are stress-tested by analysts with different specialties before capital is allocated. QuantAgent automates this process using Large Language Models (LLMs). The system orchestrates a graph of specialized agents—each with a distinct analytical lens—to analyze market data, company financials, news catalysts, and technical structures, culminating in a highly convicted trade proposal.
 
-## Demo
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/ChopinNo3Op9/QuantAgent/main/demo.gif" 
-       alt="QuantForge Demo" 
-       width="100%">
-</div>
-
 ## ✨ Key Features
 
 - **Multi-Agent Collaboration:** A network of specialized agents that analyze data in parallel and debate their findings.

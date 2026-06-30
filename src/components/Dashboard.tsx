@@ -15,38 +15,76 @@ function cn(...inputs: ClassValue[]) {
 }
 
 // Generate mock backtest data based on the action
-function generateBacktestData(action: string) {
+function generateBacktestData(action: string, history: any[], initialCapital: number) {
+  if (!history || history.length === 0) return { data: [], metrics: null };
+
   const data = [];
-  let currentEquity = 100000;
-  let benchmarkEquity = 100000;
+  let currentEquity = initialCapital;
+  let benchmarkEquity = initialCapital;
   const isBuy = action === 'BUY';
   const isSell = action === 'SELL';
   
-  for (let i = 0; i <= 100; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() - (100 - i));
+  const initialPrice = history[0].close;
+  let peak = initialCapital;
+  let maxDrawdown = 0;
+  let wins = 0;
+  let totalDays = 0;
+  
+  const dailyReturns = [];
+
+  for (let i = 0; i < history.length; i++) {
+    const r = history[i];
+    const currentPrice = r.close;
+    benchmarkEquity = initialCapital * (currentPrice / initialPrice);
     
-    // Random walk with drift based on action
-    const drift = isBuy ? 0.0015 : (isSell ? -0.001 : 0);
-    const volatility = 0.012;
-    const benchDrift = 0.0005;
+    if (i === 0) {
+      data.push({
+        date: r.date,
+        Strategy: Math.round(currentEquity),
+        Benchmark: Math.round(benchmarkEquity)
+      });
+      continue;
+    }
     
-    const dailyReturn = drift + (Math.random() - 0.5) * volatility;
-    const benchReturn = benchDrift + (Math.random() - 0.5) * 0.012;
+    const prevPrice = history[i-1].close;
+    const returnPct = (currentPrice - prevPrice) / prevPrice;
     
-    // If agent sold, it holds cash (return = 0) or shorts (inverse return). 
-    const strategyReturn = isBuy ? dailyReturn : (isSell ? -dailyReturn : 0);
-    
+    // Strategy: Long if BUY, Short if SELL, cash if HOLD
+    const strategyReturn = isBuy ? returnPct : (isSell ? -returnPct : 0);
     currentEquity *= (1 + strategyReturn);
-    benchmarkEquity *= (1 + benchReturn);
+    
+    if (strategyReturn > 0) wins++;
+    totalDays++;
+    dailyReturns.push(strategyReturn);
+    
+    if (currentEquity > peak) peak = currentEquity;
+    const drawdown = (peak - currentEquity) / peak;
+    if (drawdown > maxDrawdown) maxDrawdown = drawdown;
     
     data.push({
-      date: date.toISOString().split('T')[0],
+      date: r.date,
       Strategy: Math.round(currentEquity),
       Benchmark: Math.round(benchmarkEquity)
     });
   }
-  return data;
+  
+  const expectedReturn = ((currentEquity - initialCapital) / initialCapital) * 100;
+  const winRate = totalDays > 0 ? (wins / totalDays) * 100 : 0;
+  
+  // Simple Sharpe approximation (annualized)
+  const avgReturn = dailyReturns.reduce((a, b) => a + b, 0) / (dailyReturns.length || 1);
+  const stdDev = Math.sqrt(dailyReturns.reduce((sq, val) => sq + Math.pow(val - avgReturn, 2), 0) / (dailyReturns.length || 1));
+  const sharpe = stdDev === 0 ? 0 : (avgReturn / stdDev) * Math.sqrt(252);
+
+  return {
+    data,
+    metrics: {
+      expectedReturn: expectedReturn.toFixed(1) + '%',
+      maxDrawdown: '-' + (maxDrawdown * 100).toFixed(1) + '%',
+      sharpe: sharpe.toFixed(2),
+      winRate: winRate.toFixed(0) + '%'
+    }
+  };
 }
 
 export function Dashboard() {
@@ -59,6 +97,7 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<any>(null);
   const [backtestData, setBacktestData] = useState<any[]>([]);
+  const [backtestMetrics, setBacktestMetrics] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'trace' | 'backtest'>('overview');
 
   const runAnalysis = async () => {
@@ -80,7 +119,9 @@ export function Dashboard() {
       
       const data = await response.json();
       setResults(data);
-      setBacktestData(generateBacktestData(data.proposal.action));
+      const { data: chartData, metrics } = generateBacktestData(data.proposal.action, data.history, Number(capital) || 100000);
+      setBacktestData(chartData);
+      setBacktestMetrics(metrics);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -540,19 +581,19 @@ export function Dashboard() {
                 <div className="grid grid-cols-4 gap-4 pt-4 border-t border-zinc-800">
                   <div>
                     <div className="text-xs text-zinc-500 mb-1">Expected Return</div>
-                    <div className="text-lg font-medium text-emerald-400">+14.2%</div>
+                    <div className={cn("text-lg font-medium", backtestMetrics?.expectedReturn?.startsWith('-') ? "text-red-400" : "text-emerald-400")}>{backtestMetrics?.expectedReturn || '0%'}</div>
                   </div>
                   <div>
                     <div className="text-xs text-zinc-500 mb-1">Max Drawdown</div>
-                    <div className="text-lg font-medium text-red-400">-5.8%</div>
+                    <div className="text-lg font-medium text-red-400">{backtestMetrics?.maxDrawdown || '0%'}</div>
                   </div>
                   <div>
                     <div className="text-xs text-zinc-500 mb-1">Sharpe Ratio</div>
-                    <div className="text-lg font-medium text-zinc-200">1.84</div>
+                    <div className="text-lg font-medium text-zinc-200">{backtestMetrics?.sharpe || '0'}</div>
                   </div>
                   <div>
                     <div className="text-xs text-zinc-500 mb-1">Win Rate</div>
-                    <div className="text-lg font-medium text-zinc-200">62%</div>
+                    <div className="text-lg font-medium text-zinc-200">{backtestMetrics?.winRate || '0%'}</div>
                   </div>
                 </div>
               </div>

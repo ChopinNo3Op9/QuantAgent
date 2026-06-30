@@ -94,6 +94,22 @@ const proposalSchema: Schema = {
   required: ['ticker', 'action', 'suggested_size_pct', 'rationale', 'disagreement_summary', 'confidence']
 };
 
+async function fetchFullHistoricalPrices(ticker: string) {
+  try {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 6);
+    const result: any = await yahooFinance.historical(ticker, { period1: startDate, period2: endDate, interval: '1d' });
+    
+    return result.map((r: any) => ({
+      date: r.date.toISOString().split('T')[0],
+      close: r.close
+    }));
+  } catch (error) {
+    return [];
+  }
+}
+
 // -- API Routes --
 app.post('/api/analyze', async (req, res) => {
   const { ticker } = req.body;
@@ -103,15 +119,16 @@ app.post('/api/analyze', async (req, res) => {
 
   try {
     // 1. Fetch data in parallel
-    const [profile, prices, news] = await Promise.all([
+    const [profile, prices, news, fullHistory] = await Promise.all([
       fetchCompanyProfile(ticker),
       fetchHistoricalPrices(ticker),
-      fetchRecentNews(ticker)
+      fetchRecentNews(ticker),
+      fetchFullHistoricalPrices(ticker)
     ]);
 
     // 2. Run Agents Sequentially to avoid rate limits
     const fundamentalRes = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: `You are a Fundamental Analyst. Evaluate the following company profile and financials for ${ticker}: \n\n${profile}\n\nProvide bull points, bear points, and confidence.`,
       config: {
         responseMimeType: 'application/json',
@@ -121,7 +138,7 @@ app.post('/api/analyze', async (req, res) => {
     });
 
     const technicalRes = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: `You are a Technical Analyst. Analyze the following 10-day price history for ${ticker}: \n\n${prices}\n\nIdentify the trend regime, give a momentum score (0-100), and state your confidence.`,
       config: {
         responseMimeType: 'application/json',
@@ -131,7 +148,7 @@ app.post('/api/analyze', async (req, res) => {
     });
 
     const sentimentRes = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: `You are a Sentiment Analyst. Evaluate the following recent news for ${ticker}: \n\n${news}\n\nIdentify overall sentiment, key catalysts, and your confidence.`,
       config: {
         responseMimeType: 'application/json',
@@ -156,7 +173,7 @@ Output your final trade proposal according to the schema.
 `;
 
     const coordinatorRes = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: coordinatorPrompt,
       config: {
         responseMimeType: 'application/json',
@@ -172,7 +189,8 @@ Output your final trade proposal according to the schema.
       fundamental: fundamentalData,
       technical: technicalData,
       sentiment: sentimentData,
-      proposal: proposalData
+      proposal: proposalData,
+      history: fullHistory
     });
 
   } catch (error: any) {

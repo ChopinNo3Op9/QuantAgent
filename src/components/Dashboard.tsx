@@ -89,23 +89,24 @@ export function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 w-full max-w-7xl mx-auto">
+    <div className="flex h-full w-full">
       {/* Sidebar Input Panel */}
-      <div className="w-full lg:w-80 flex-shrink-0 space-y-6">
-        <div className="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-5 shadow-xl">
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-800">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+      <div className="w-80 flex-shrink-0 border-r border-zinc-800/80 bg-zinc-950/80 backdrop-blur-xl flex flex-col h-full z-10 overflow-y-auto">
+        <div className="p-6 flex-1">
+          <div className="flex items-center gap-3 mb-8 pb-4 border-b border-zinc-800">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.1)]">
               <Cpu className="w-5 h-5 text-indigo-400" />
             </div>
             <div>
               <h1 className="text-lg font-semibold text-zinc-100 leading-tight">QuantAgent</h1>
-              <p className="text-xs text-zinc-500">Multi-Agent Framework</p>
+              <p className="text-[10px] text-zinc-500 font-mono tracking-widest mt-0.5">MULTI-AGENT SYSTEM</p>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
               <label className="text-xs font-medium text-zinc-400 mb-1.5 block uppercase tracking-wider">Target Ticker</label>
+
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Target className="h-4 w-4 text-zinc-500" />
@@ -196,19 +197,26 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-4 text-xs text-zinc-500 leading-relaxed">
-          <strong>Disclaimer:</strong> This is an educational research tool powered by an LLM multi-agent framework. Not financial advice. Output depends on real-time market data retrieval via yfinance.
+        <div className="p-4 mt-auto border-t border-zinc-800/50">
+          <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-4 text-xs text-zinc-500 leading-relaxed">
+            <strong>Disclaimer:</strong> This is an educational research tool powered by an LLM multi-agent framework. Not financial advice. Output depends on real-time market data retrieval via yfinance.
+          </div>
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 space-y-6">
-        {error && (
-          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3 text-red-400">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <p className="text-sm font-medium">{error}</p>
-          </div>
-        )}
+      <main className="flex-1 relative overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed flex flex-col">
+        <div className="absolute inset-0 bg-zinc-950/90 [mask-image:linear-gradient(to_bottom,transparent,black)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px] pointer-events-none" />
+        
+        <div className="relative flex-1 overflow-y-auto p-8">
+          <div className="max-w-6xl mx-auto space-y-6">
+            {error && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3 text-red-400">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <p className="text-sm font-medium">{error}</p>
+              </div>
+            )}
 
         {!results && !loading && !error && (
           <div className="h-full min-h-[500px] flex flex-col items-center justify-center text-zinc-500 border border-dashed border-zinc-800 rounded-2xl bg-zinc-900/20">
@@ -551,7 +559,9 @@ export function Dashboard() {
             )}
           </div>
         )}
-      </div>
+        </div>
+        </div>
+      </main>
     </div>
   );
 }

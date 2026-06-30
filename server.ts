@@ -109,8 +109,8 @@ app.post('/api/analyze', async (req, res) => {
       fetchRecentNews(ticker)
     ]);
 
-    // 2. Run Agents in Parallel
-    const fundamentalPromise = ai.models.generateContent({
+    // 2. Run Agents Sequentially to avoid rate limits
+    const fundamentalRes = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `You are a Fundamental Analyst. Evaluate the following company profile and financials for ${ticker}: \n\n${profile}\n\nProvide bull points, bear points, and confidence.`,
       config: {
@@ -120,7 +120,7 @@ app.post('/api/analyze', async (req, res) => {
       }
     });
 
-    const technicalPromise = ai.models.generateContent({
+    const technicalRes = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `You are a Technical Analyst. Analyze the following 10-day price history for ${ticker}: \n\n${prices}\n\nIdentify the trend regime, give a momentum score (0-100), and state your confidence.`,
       config: {
@@ -130,7 +130,7 @@ app.post('/api/analyze', async (req, res) => {
       }
     });
 
-    const sentimentPromise = ai.models.generateContent({
+    const sentimentRes = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `You are a Sentiment Analyst. Evaluate the following recent news for ${ticker}: \n\n${news}\n\nIdentify overall sentiment, key catalysts, and your confidence.`,
       config: {
@@ -139,10 +139,6 @@ app.post('/api/analyze', async (req, res) => {
         temperature: 0.2
       }
     });
-
-    const [fundamentalRes, technicalRes, sentimentRes] = await Promise.all([
-      fundamentalPromise, technicalPromise, sentimentPromise
-    ]);
 
     const fundamentalData = JSON.parse(fundamentalRes.text || "{}");
     const technicalData = JSON.parse(technicalRes.text || "{}");
